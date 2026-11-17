@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>แมวในไลฟ์ (ต้นแบบ)</title>
+<style>
+:root { color-scheme: light dark; --bg:#fdf3e7; --fg:#333; --room:#f4d9b5; --card:#fff; --bar:#e8c9a0; --accent:#e0735c; }
+@media (prefers-color-scheme: dark) { :root { --bg:#1e1b18; --fg:#eee; --room:#4a3b2c; --card:#2b2620; --bar:#5a4a38; --accent:#f08a72; } }
+* { box-sizing: border-box; }
+body { margin:0; padding:12px; font-family: system-ui, "Sarabun", sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+h1 { font-size:18px; margin:4px 0 10px; }
+#room { position:relative; width:100%; max-width:380px; height:220px; background:var(--room); border-radius:16px; overflow:hidden; }
+.cat { position:absolute; bottom:50px; width:84px; transform:translateX(-50%); transition:left 1.4s ease-in-out, transform .3s, opacity .3s; cursor:pointer; user-select:none; -webkit-user-select:none; }
+.cat.sleep { transform:translateX(-50%) rotate(-12deg); opacity:.75; }
+#bowl { position:absolute; bottom:12px; left:12%; transform:translateX(-50%); font-size:30px; cursor:pointer; }
+#toy { position:absolute; bottom:18px; right:90px; font-size:28px; cursor:pointer; }
+#bed { position:absolute; top:10px; right:10px; font-size:32px; cursor:pointer; }
+#fish { position:absolute; bottom:18px; right:14px; font-size:26px; opacity:0; transition:opacity .3s; }
+#bubble { position:absolute; top:10px; left:50%; transform:translateX(-50%); max-width:60%; background:var(--card); padding:6px 10px; border-radius:12px; font-size:13px; opacity:0; transition:opacity .3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#panel { width:100%; max-width:380px; background:var(--card); border-radius:14px; padding:10px 12px; margin-top:12px; }
+.top { font-size:13px; margin-bottom:4px; opacity:.85; }
+.c { border-bottom:1px solid var(--bar); padding:8px 0; }
+.c:last-child { border-bottom:none; }
+.name { font-weight:600; font-size:15px; }
+.desc { font-size:12px; opacity:.75; }
+.status { font-size:12px; margin-top:2px; }
+.stat { font-size:12px; margin-top:4px; }
+.bar { height:8px; background:var(--bar); border-radius:6px; overflow:hidden; margin-top:2px; }
+.fill { height:100%; background:var(--accent); width:0%; transition:width .4s; }
+.label { font-size:12px; opacity:.7; margin-top:14px; width:100%; max-width:380px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; width:100%; max-width:380px; }
+button { padding:12px 6px; border:none; border-radius:12px; background:var(--accent); color:#fff; font-size:14px; cursor:pointer; }
+button.alt { background:var(--bar); color:var(--fg); }
+input { width:100%; padding:10px; border-radius:10px; border:1px solid var(--bar); background:var(--card); color:var(--fg); font-size:14px; }
+.row { width:100%; max-width:380px; display:flex; gap:8px; margin-top:6px; }
+#log { width:100%; max-width:380px; margin-top:6px; font-size:12px; background:var(--card); border-radius:12px; padding:10px; height:120px; overflow-y:auto; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<h1>แมวในไลฟ์ (ต้นแบบ)</h1>
+
+<div id="room">
+  <div id="bubble"></div>
+  <img class="cat" id="cat-mali" src="images/mali.png" alt="มะลิ">
+  <img class="cat" id="cat-pla-pao" src="images/pla-pao.png" alt="ปลาเผา">
+  <img class="cat" id="cat-cha-thai" src="images/cha-thai.png" alt="ชาไทย">
+  <div id="bowl" title="ให้อาหาร">🥣</div>
+  <div id="toy" title="เล่น">🧶</div>
+  <div id="bed" title="ปลุก">🛏️</div>
+  <div id="fish">🐟</div>
+</div>
+
+<div id="panel"></div>
+
+<div class="grid">
+  <button class="alt" id="shareBtn">🔗 แชร์ พาเพื่อนมา</button>
+  <button class="alt" id="giftBtn">🎁 ของขวัญปลา</button>
+</div>
+
+<div class="label">ชื่อผู้ใช้ (ทดสอบเท่านั้น ไลฟ์จริงจะดึงจาก TikTok)</div>
+<div class="row"><input id="uname" placeholder="ชื่อผู้ใช้ เช่น ฉัน"></div>
+
+<div class="label">พิมพ์คอมเมนต์ เช่น "อาหาร มะลิ" "ลูบ ปลาเผา" "เล่น" "ปลุก" "ปลา" หรือ "สวัสดี"</div>
+<div class="row">
+  <input id="cmt" placeholder="พิมพ์คอมเมนต์">
+  <button id="sendCmt">ส่ง</button>
+</div>
+
+<div class="label">บันทึกเหตุการณ์</div>
+<div id="log"></div>
+
+<script>
+const CATS = {
+  "mali":     { name:"มะลิ",    desc:"พี่สาว ขี้อาย ชอบความสงบ ชอบนอน",      hungerRate:.4, sleepRate:.6, petNeed:7, home:"20%" },
+  "pla-pao":  { name:"ปลาเผา",  desc:"น้องเล็ก อารมณ์ดี ซุกซน ชอบขนมและเล่น", hungerRate:.9, sleepRate:.2, petNeed:5, home:"50%" },
+  "cha-thai": { name:"ชาไทย",   desc:"อินดี้ เอาแต่ใจ ขี้อ้อน ขี้เกียจ",       hungerRate:.6, sleepRate:.3, petNeed:3, home:"80%" }
+};
+const IDS = Object.keys(CATS);
+const S = { visitors: 0, cats: {} };
+IDS.forEach(id => S.cats[id] = { hunger:20, sleep:10, bond:0, feedTaps:0, petTaps:0, sleeping:false, eating:false, begging:false });
+
+const $ = id => document.getElementById(id);
+const clamp = (v, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v));
+const userName = () => $("uname").value.trim() || "ผู้ชม";
+
+function log(msg) {
+  const t = new Date().toLocaleTimeString("th-TH");
+  $("log").innerHTML = `<div>[${t}] ${msg}</div>` + $("log").innerHTML;
+}
+function bubble(msg, ms = 2000) {
+  $("bubble").textContent = msg;
+  $("bubble").style.opacity = 1;
+  clearTimeout(bubble.t);
+  bubble.t = setTimeout(() => $("bubble").style.opacity = 0, ms);
+}
+const sayAt = (id, msg, ms) => bubble(CATS[id].name + ": " + msg, ms);
+
+function moveCat(id, toBowl) {
+  $("cat-" + id).style.left = toBowl ? "12%" : CATS[id].home;
+}
+
+function findCat(text) {
+  return IDS.find(id => text.includes(CATS[id].name)) || null;
+}
+const hungriest = () => [...IDS].sort((a, b) => S.cats[b].hunger - S.cats[a].hunger)[0];
+const lowestBond = () => [...IDS].sort((a, b) => S.cats[a].bond - S.cats[b].bond)[0];
+const sleepingOne = () => IDS.find(id => S.cats[id].sleeping) || null;
+
+function feed(id) {
+  const c = S.cats[id];
+  if (c.sleeping) { sayAt(id, "zzz... ให้ตื่นก่อน"); return; }
+  c.feedTaps++;
+  if (c.feedTaps < 2) { sayAt(id, "กดอีกครั้งเพื่อให้อาหาร (1/2)"); log(`ให้อาหาร ${CATS[id].name} 1/2 ครั้ง`); return; }
+  c.feedTaps = 0;
+  c.eating = true;
+  c.hunger = clamp(c.hunger - 40);
+  moveCat(id, true);
+  setTimeout(() => {
+    sayAt(id, "ม้วม อร่อย!");
+    setTimeout(() => { c.eating = false; moveCat(id, false); }, 2000);
+  }, 1400);
+  log(`${CATS[id].name} กินอาหาร 1 มื้อ`);
+  render();
+}
+
+function pet(id) {
+  const c = S.cats[id];
+  if (c.sleeping) { wake(id); return; }
+  c.petTaps++;
+  if (c.petTaps >= CATS[id].petNeed) {
+    c.petTaps = 0;
+    c.bond = clamp(c.bond + 5);
+    sayAt(id, "เพิร์ร... คลอเคลีย");
+    log(`ลูบ ${CATS[id].name} ครบ สนิท +5`);
+  } else {
+    log(`ลูบ ${CATS[id].name} ${c.petTaps}/${CATS[id].petNeed}`);
+  }
+  render();
+}
+
+function play(id) {
+  const c = S.cats[id];
+  if (c.sleeping) { sayAt(id, "zzz... ให้ตื่นก่อน"); return; }
+  c.bond = clamp(c.bond + 2);
+  c.sleep = clamp(c.sleep + 5);
+  sayAt(id, "เล่นสนุกจัง!");
+  log(`เล่นกับ ${CATS[id].name} สนิท +2`);
+  render();
+}
+
+function comment(id) {
+  if (id) {
+    S.cats[id].bond = clamp(S.cats[id].bond + 1);
+    sayAt(id, `สวัสดี ${userName()}!`);
+  } else {
+    const target = lowestBond();
+    S.cats[target].bond = clamp(S.cats[target].bond + 1);
+    bubble(`สวัสดี ${userName()}!`);
+  }
+  log(`ทักทาย สนิท +1`);
+  render();
+}
+
+function wake(id) {
+  const c = S.cats[id];
+  c.sleeping = false;
+  c.sleep = 30;
+  sayAt(id, "ตื่นแล้ว!");
+  log(`${CATS[id].name} ตื่นแล้ว`);
+  render();
+}
+
+function bed() {
+  const id = sleepingOne();
+  if (id) wake(id);
+  else bubble("ตอนนี้ไม่มีตัวไหนหลับ");
+}
+
+function gift(id) {
+  const target = id || hungriest();
+  const c = S.cats[target];
+  c.hunger = clamp(c.hunger - 20);
+  c.bond = clamp(c.bond + 3);
+  $("fish").style.opacity = 1;
+  setTimeout(() => $("fish").style.opacity = 0, 2500);
+  sayAt(target, `ขอบคุณ ${userName()} สำหรับของขวัญ!`, 2500);
+  log(`${userName()} ส่งของขวัญปลาให้ ${CATS[target].name} สนิท +3`);
+  render();
+}
+
+function handleComment(text) {
+  const t = text.trim();
+  if (!t) return;
+  log(`${userName()}: ${t}`);
+  const id = findCat(t);
+  if (t.includes("อาหาร")) feed(id || hungriest());
+  else if (t.includes("ลูบ")) pet(id || lowestBond());
+  else if (t.includes("เล่น")) play(id || lowestBond());
+  else if (t.includes("ปลุก")) { if (id && S.cats[id].sleeping) wake(id); else bed(); }
+  else if (!id && (t.includes("ของขวัญ") || t.includes("ปลา"))) gift();
+  else comment(id);
+  $("cmt").value = "";
+}
+
+function tick() {
+  IDS.forEach(id => {
+    const c = S.cats[id];
+    const r = CATS[id];
+    if (!c.eating) {
+      c.hunger = clamp(c.hunger + 0.6 * r.hungerRate);
+      c.bond = clamp(c.bond - 0.02);
+    }
+    if (!c.sleeping) c.sleep = clamp(c.sleep + 0.3 * r.sleepRate);
+
+    if (!c.sleeping && c.sleep >= 80) {
+      c.sleeping = true;
+      sayAt(id, "zzz...");
+      log(`${r.name} หลับ ลูบหรือกดที่นอนเพื่อปลุก`);
+    }
+    if (c.hunger >= 70 && !c.eating && !c.sleeping && !c.begging) {
+      c.begging = true;
+      moveCat(id, true);
+      sayAt(id, "หิวแล้ว... มาให้อาหารหน่อย", 3500);
+      setTimeout(() => { c.begging = false; if (!c.eating) moveCat(id, false); }, 4000);
+    }
+  });
+  render();
+}
+
+function render() {
+  $("panel").innerHTML =
+    `<div class="top">ผู้เยี่ยมชม ${S.visitors} คน</div>` +
+    IDS.map(id => {
+      const c = S.cats[id], r = CATS[id];
+      let status = "ปกติ";
+      if (c.sleeping) status = "กำลังหลับ";
+      else if (c.eating) status = "กำลังกิน";
+      else if (c.hunger >= 70) status = "หิวมาก";
+      else if (c.bond >= 50) status = "สนิทมาก";
+      const unlock = c.bond >= 50 ? " · ปลดล็อกท่าทางใหม่" : "";
+      el = `<div class="c">
+        <div class="name">${r.name}</div>
+        <div class="desc">${r.desc}</div>
+        <div class="status">สถานะ: ${status}${unlock}</div>
+        <div class="stat">หิว ${Math.round(c.hunger)}%<div class="bar"><div class="fill" style="width:${c.hunger}%"></div></div></div>
+        <div class="stat">ง่วง ${Math.round(c.sleep)}%<div class="bar"><div class="fill" style="width:${c.sleep}%"></div></div></div>
+        <div class="stat">สนิท ${Math.round(c.bond)}<div class="bar"><div class="fill" style="width:${c.bond}%"></div></div></div>
+      </div>`;
+      return el;
+    }).join("");
+  IDS.forEach(id => $("cat-" + id).classList.toggle("sleep", S.cats[id].sleeping));
+}
+
+// ---- ผูกการกดทั้งหมดด้วยสคริปต์ ----
+IDS.forEach(id => {
+  $("cat-" + id).style.left = CATS[id].home;
+  $("cat-" + id).addEventListener("click", () => pet(id));
+});
+$("bowl").addEventListener("click", () => feed(hungriest()));
+$("toy").addEventListener("click", () => play(lowestBond()));
+$("bed").addEventListener("click", bed);
+$("shareBtn").addEventListener("click", () => { S.visitors++; bubble("เพื่อนมาเยี่ยมแล้ว!"); log("มีคนแชร์ไลฟ์ +1 ผู้เยี่ยมชม"); render(); });
+$("giftBtn").addEventListener("click", () => gift());
+$("sendCmt").addEventListener("click", () => handleComment($("cmt").value));
+$("cmt").addEventListener("keydown", e => { if (e.key === "Enter") handleComment($("cmt").value); });
+
+setInterval(tick, 1000);
+render();
+log("พร้อมทดสอบ กดชาม แมว ของเล่น หรือที่นอน หรือพิมพ์คอมเมนต์");
+</script>
+</body>
+</html>
